@@ -102,6 +102,7 @@ export default function AdminPage() {
     }
 
     checkAdminAndLoadUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, supabase])
 
   const loadUsers = async () => {

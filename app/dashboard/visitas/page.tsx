@@ -52,6 +52,7 @@ export default function VisitasPage() {
 
   useEffect(() => {
     fetchRutas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger])
 
   const fetchRutas = async () => {
