@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Colores base: blanco y negro */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    
+    /* Colores primarios de la paleta */
+    /* #003655 - azul oscuro (primary) */
+    --primary: 200 100% 16.7%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* #084c71 - azul medio (accent) */
+    --accent: 200 87% 23.7%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* #366282 - azul claro (secondary) */
+    --secondary: 200 41% 36.1%;
+    --secondary-foreground: 0 0% 100%;
+    
+    /* Componentes */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 200 100% 16.7%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Fondo oscuro con negro */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    
+    /* Colores primarios ajustados para modo oscuro */
+    --primary: 200 87% 23.7%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 200 41% 36.1%;
+    --accent-foreground: 0 0% 100%;
+    --secondary: 200 100% 16.7%;
+    --secondary-foreground: 0 0% 100%;
+    
+    /* Componentes modo oscuro */
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 200 87% 23.7%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Estilos para el dropdown de Google Maps Autocomplete */
+.pac-container {
+  z-index: 99999 !important;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  margin-top: 4px;
+  background-color: hsl(var(--background));
+  position: absolute !important;
+}
+
+.pac-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-top: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+}
+
+.pac-item:first-child {
+  border-top: none;
+}
+
+.pac-item:hover {
+  background-color: hsl(var(--muted));
+}
+
+.pac-item-selected {
+  background-color: hsl(var(--primary) / 0.1);
+}
+
+.pac-item-query {
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+}
+
+.pac-icon {
+  margin-right: 0.5rem;
+}
+
+.pac-matched {
+  font-weight: 600;
+  color: hsl(var(--primary));
+}
+
+/* Ocultar mensajes de error de Google Maps - se aplica dinámicamente via JavaScript */
+.gm-err-container,
+.gm-err-message,
+[class*="gm-err"],
+[id*="gm-err"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
