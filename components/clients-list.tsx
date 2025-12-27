@@ -69,6 +69,7 @@ export function ClientsList({
 
   useEffect(() => {
     fetchClients()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, refreshTrigger, searchQuery, tipoEstablecimientoFilter, provinciaFilter])
 
   const fetchClients = async () => {

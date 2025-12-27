@@ -138,6 +138,7 @@ export function AddRutaDialog({ open, onOpenChange, rutaId, onSuccess }: AddRuta
         })
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, rutaId])
 
   const loadAvailableClients = async () => {

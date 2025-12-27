@@ -65,6 +65,7 @@ export function RutaDetalleDialog({ open, onOpenChange, rutaId, onSuccess }: Rut
     if (open && rutaId) {
       loadRutaDetalle()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, rutaId])
 
   const loadRutaDetalle = async () => {
@@ -357,7 +358,7 @@ export function RutaDetalleDialog({ open, onOpenChange, rutaId, onSuccess }: Rut
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Al establecer una fecha de finalización, la ruta se marcará como "Finalizada"
+              Al establecer una fecha de finalización, la ruta se marcará como &quot;Finalizada&quot;
             </p>
           </div>
           {rutaClientes.length === 0 ? (

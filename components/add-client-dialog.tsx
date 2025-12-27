@@ -402,7 +402,7 @@ export function AddClientDialog({ open, onOpenChange, clientId, onSuccess }: Add
       console.error("Error al crear autocomplete:", error)
       setError("Error al inicializar el autocompletado de direcciones")
     }
-  }, [setValue, open])
+  }, [setValue, open, hideGoogleMapsErrors])
 
   // Cargar datos del cliente si se está editando
   useEffect(() => {
@@ -418,6 +418,7 @@ export function AddClientDialog({ open, onOpenChange, clientId, onSuccess }: Add
         })
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, clientId])
 
   const loadClientData = async () => {
@@ -568,7 +569,7 @@ export function AddClientDialog({ open, onOpenChange, clientId, onSuccess }: Add
       }
       clearInterval(errorCheckInterval)
     }
-  }, [open, initAutocomplete])
+  }, [open, initAutocomplete, hideGoogleMapsErrors])
 
   const onSubmit = async (data: ClientFormValues) => {
     setError(null)

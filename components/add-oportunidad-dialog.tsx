@@ -139,6 +139,7 @@ export function AddOportunidadDialog({
         })
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, oportunidadId, clientId])
 
   const loadAvailableClients = async () => {
