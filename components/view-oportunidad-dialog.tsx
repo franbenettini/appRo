@@ -401,32 +401,40 @@ export function ViewOportunidadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto p-0">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-background border-b p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
+      <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-y-auto p-0">
+        {/* Header mejorado */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-background to-muted/20 border-b p-6 shadow-sm">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start gap-4">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => onOpenChange(false)}
-                className="h-7 w-7"
+                className="h-9 w-9 rounded-full hover:bg-muted"
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
+                <ArrowLeft className="h-4 w-4" />
               </Button>
-              {oportunidad && (
-                <Badge className={getEstadoColor(oportunidad.estado)}>
-                  {getEstadoLabel(oportunidad.estado)}
-                </Badge>
-              )}
-              {oportunidad && (() => {
-                const { dias, estaCerrada } = calcularDiasTotales()
-                return (
-                  <span className="text-xs text-muted-foreground">
-                    {dias} {estaCerrada ? "días totales" : "días activa"}
-                  </span>
-                )
-              })()}
+              <div className="space-y-2">
+                {oportunidad && (
+                  <div className="flex items-center gap-3">
+                    <Badge className={`${getEstadoColor(oportunidad.estado)} text-sm px-3 py-1 font-medium`}>
+                      {getEstadoLabel(oportunidad.estado)}
+                    </Badge>
+                    {(() => {
+                      const { dias, estaCerrada } = calcularDiasTotales()
+                      return (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span>{dias} {estaCerrada ? "días totales" : "días activa"}</span>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+                {oportunidad && (
+                  <h1 className="text-2xl font-bold text-foreground">{oportunidad.titulo}</h1>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {onEdit && oportunidad && (isAdmin || oportunidad.created_by === currentUserId) && (
@@ -437,9 +445,9 @@ export function ViewOportunidadDialog({
                     onOpenChange(false)
                     onEdit(oportunidad.id)
                   }}
-                  className="h-8 text-xs"
+                  className="h-9 text-sm"
                 >
-                  <Edit className="h-3.5 w-3.5 mr-1.5" />
+                  <Edit className="h-4 w-4 mr-2" />
                   Editar
                 </Button>
               )}
@@ -451,62 +459,67 @@ export function ViewOportunidadDialog({
                     onOpenChange(false)
                     onDelete(oportunidad.id)
                   }}
-                  className="h-8 text-xs"
+                  className="h-9 text-sm"
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Eliminar
                 </Button>
               )}
             </div>
           </div>
-          {oportunidad && (
-            <h1 className="text-xl font-semibold">{oportunidad.titulo}</h1>
-          )}
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-6 space-y-5">
 
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <p className="text-muted-foreground">Cargando...</p>
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                <p className="text-sm text-muted-foreground">Cargando información...</p>
+              </div>
             </div>
           ) : error ? (
-            <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-              {error}
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-4 text-sm text-destructive flex items-start gap-3">
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-destructive/20 flex items-center justify-center mt-0.5">
+                <span className="text-xs font-bold">!</span>
+              </div>
+              <p>{error}</p>
             </div>
           ) : oportunidad ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               {/* Columna Izquierda */}
-              <div className="lg:col-span-2 space-y-4">
+              <div className="lg:col-span-2 space-y-5">
                 {/* Información del Cliente */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
+                <Card className="shadow-sm hover:shadow-md transition-shadow border-border/50">
+                  <CardHeader className="pb-4 bg-gradient-to-br from-muted/30 to-muted/10">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2.5 text-foreground">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
                       Información del Cliente
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-3.5">
-                      <div>
-                        <Label className="text-xs font-medium text-muted-foreground">Cliente</Label>
-                        <p className="text-sm font-medium mt-0.5">
+                  <CardContent className="pt-5">
+                    <div className="space-y-4">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cliente</Label>
+                        <p className="text-base font-semibold mt-1.5 text-foreground">
                           {oportunidad.cliente?.razon_social || oportunidad.cliente?.nombre_establecimiento || "Sin nombre"}
                         </p>
                       </div>
-                      <div>
-                        <Label className="text-xs font-medium text-muted-foreground">Ubicación</Label>
-                        <p className="text-sm font-medium mt-0.5">{ubicacion}</p>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ubicación</Label>
+                        <p className="text-base font-medium mt-1.5 text-foreground">{ubicacion}</p>
                       </div>
                       <div className="pt-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setClientDialogOpen(true)}
-                          className="h-8 text-xs"
+                          className="h-9 text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
                         >
-                          <Eye className="h-3.5 w-3.5 mr-1.5" />
-                          Ver Cliente
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Detalles del Cliente
                         </Button>
                       </div>
                     </div>
@@ -514,36 +527,40 @@ export function ViewOportunidadDialog({
                 </Card>
 
                 {/* Descripción */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
+                <Card className="shadow-sm hover:shadow-md transition-shadow border-border/50">
+                  <CardHeader className="pb-4 bg-gradient-to-br from-muted/30 to-muted/10">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2.5 text-foreground">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
                       Descripción
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                      {oportunidad.descripcion || "Sin descripción"}
-                    </p>
+                  <CardContent className="pt-5">
+                    <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">
+                        {oportunidad.descripcion || "Sin descripción"}
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
 
                 {/* Cambiar Estado */}
                 {oportunidad && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium">Cambiar Estado</CardTitle>
+                  <Card className="shadow-sm hover:shadow-md transition-shadow border-border/50 border-l-4 border-l-primary">
+                    <CardHeader className="pb-4 bg-gradient-to-br from-primary/5 to-primary/0">
+                      <CardTitle className="text-base font-semibold text-foreground">Cambiar Estado</CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-3.5">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="nuevo_estado" className="text-xs">Nuevo Estado</Label>
+                    <CardContent className="pt-5">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="nuevo_estado" className="text-sm font-semibold">Nuevo Estado</Label>
                           <Select
                             value={nuevoEstado}
                             onValueChange={setNuevoEstado}
                             disabled={changingEstado}
                           >
-                            <SelectTrigger id="nuevo_estado" className="h-9">
+                            <SelectTrigger id="nuevo_estado" className="h-10 text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -556,8 +573,8 @@ export function ViewOportunidadDialog({
                           </Select>
                         </div>
 
-                        <div className="space-y-1.5">
-                          <Label htmlFor="comentario" className="text-xs">Comentario (opcional)</Label>
+                        <div className="space-y-2">
+                          <Label htmlFor="comentario" className="text-sm font-semibold">Comentario (opcional)</Label>
                           <Textarea
                             id="comentario"
                             value={comentario}
@@ -565,16 +582,23 @@ export function ViewOportunidadDialog({
                             placeholder="Agregar un comentario sobre el cambio de estado..."
                             disabled={changingEstado}
                             rows={3}
-                            className="text-sm"
+                            className="text-sm resize-none"
                           />
                         </div>
 
                         <Button
                           onClick={handleCambiarEstado}
                           disabled={changingEstado || nuevoEstado === oportunidad.estado}
-                          className="h-9 text-xs"
+                          className="h-10 text-sm font-medium w-full sm:w-auto"
                         >
-                          {changingEstado ? "Guardando..." : "Cambiar Estado"}
+                          {changingEstado ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Guardando...
+                            </>
+                          ) : (
+                            "Cambiar Estado"
+                          )}
                         </Button>
                       </div>
                     </CardContent>
@@ -583,30 +607,32 @@ export function ViewOportunidadDialog({
               </div>
 
               {/* Columna Derecha */}
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {/* Historial */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
+                <Card className="shadow-sm hover:shadow-md transition-shadow border-border/50">
+                  <CardHeader className="pb-4 bg-gradient-to-br from-muted/30 to-muted/10">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2.5 text-foreground">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Clock className="h-4 w-4 text-primary" />
+                      </div>
                       Historial
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-3">
+                  <CardContent className="pt-5">
+                    <div className="space-y-4">
                       {/* Mostrar "Creada" primero (más antiguo arriba) */}
-                      <div className="flex items-start gap-2.5">
-                        <div className="w-0.5 bg-primary rounded-full min-h-[35px] mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                        <div className="w-1 bg-primary rounded-full min-h-[40px] flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium">Creada</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-sm font-semibold text-foreground">Creada</p>
+                          <p className="text-xs text-muted-foreground mt-1">
                             {formatDate(oportunidad.created_at)}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {(() => {
                               const { dias, estaCerrada } = calcularDiasTotales()
-                              return estaCerrada 
-                                ? `Cerrada hace ${dias} días` 
+                              return estaCerrada
+                                ? `Cerrada hace ${dias} días`
                                 : `Hace ${dias} días`
                             })()}
                           </p>
@@ -614,34 +640,32 @@ export function ViewOportunidadDialog({
                       </div>
                       {/* Mostrar historial después (filtrando el cambio "Inicial -> Nueva") */}
                       {historial.length > 0 && (
-                        <div className="space-y-2.5">
+                        <div className="space-y-3">
                           {historial
                             .filter((item) => {
-                              // Filtrar el cambio "Inicial -> Nueva" ya que es redundante
-                              // Si no hay estado_anterior (o es null) y el estado_nuevo es "nueva", no mostrarlo
                               if ((!item.estado_anterior || item.estado_anterior === "inicial") && item.estado_nuevo === "nueva") {
                                 return false
                               }
                               return true
                             })
                             .map((item, index) => (
-                              <div key={item.id} className="flex items-start gap-2.5">
-                                <div className="w-0.5 bg-muted rounded-full min-h-[35px] mt-0.5 flex-shrink-0" />
+                              <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/50 hover:bg-muted/30 transition-colors">
+                                <div className="w-1 bg-muted-foreground/30 rounded-full min-h-[40px] flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 mb-1 flex-wrap overflow-hidden">
-                                    <Badge variant="outline" className={`text-xs whitespace-nowrap ${getEstadoColor(item.estado_anterior || "")}`}>
+                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    <Badge variant="outline" className={`text-xs ${getEstadoColor(item.estado_anterior || "")} border-0`}>
                                       {item.estado_anterior ? getEstadoLabel(item.estado_anterior) : "Inicial"}
                                     </Badge>
-                                    <span className="text-xs text-muted-foreground flex-shrink-0">→</span>
-                                    <Badge className={`text-xs whitespace-nowrap ${getEstadoColor(item.estado_nuevo)}`}>
+                                    <span className="text-xs text-muted-foreground font-medium">→</span>
+                                    <Badge className={`text-xs ${getEstadoColor(item.estado_nuevo)} border-0`}>
                                       {getEstadoLabel(item.estado_nuevo)}
                                     </Badge>
                                   </div>
-                                  <p className="text-xs text-muted-foreground">
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
                                     {formatDate(item.created_at)} - {item.usuario?.full_name || item.usuario?.email || "Usuario desconocido"}
                                   </p>
                                   {item.comentario && (
-                                    <p className="text-xs text-muted-foreground mt-0.5 italic">
+                                    <p className="text-xs text-muted-foreground mt-2 italic bg-background/50 p-2 rounded border-l-2 border-muted-foreground/30">
                                       &quot;{item.comentario}&quot;
                                     </p>
                                   )}
@@ -656,18 +680,20 @@ export function ViewOportunidadDialog({
 
                 {/* Producto Asociado */}
                 {oportunidad.producto || oportunidad.tipo_producto === "descartables" ? (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Package className="h-4 w-4" />
+                  <Card className="shadow-sm hover:shadow-md transition-shadow border-border/50">
+                    <CardHeader className="pb-4 bg-gradient-to-br from-muted/30 to-muted/10">
+                      <CardTitle className="text-base font-semibold flex items-center gap-2.5 text-foreground">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Package className="h-4 w-4 text-primary" />
+                        </div>
                         Producto Asociado
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
+                    <CardContent className="pt-5">
                       {oportunidad.producto ? (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-4 p-3 rounded-lg bg-muted/20 border border-border/50">
                           {oportunidad.producto.imagen_url && (
-                            <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
+                            <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-muted shadow-sm">
                               <Image
                                 src={oportunidad.producto.imagen_url}
                                 alt={oportunidad.producto.nombre_equipo}
@@ -678,17 +704,17 @@ export function ViewOportunidadDialog({
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-xs mb-0.5 leading-tight">{oportunidad.producto.nombre_equipo}</h3>
-                            <p className="text-xs text-muted-foreground mb-1.5">
+                            <h3 className="font-semibold text-sm mb-1 leading-tight text-foreground">{oportunidad.producto.nombre_equipo}</h3>
+                            <p className="text-xs text-muted-foreground mb-2">
                               {oportunidad.producto.marca} {oportunidad.producto.modelo}
                             </p>
-                            <Badge variant="outline" className="text-xs">{oportunidad.producto.rubro}</Badge>
+                            <Badge variant="outline" className="text-xs font-medium">{oportunidad.producto.rubro}</Badge>
                           </div>
                         </div>
                       ) : (
-                        <div>
-                          <h3 className="font-medium text-xs mb-1.5">Descartables</h3>
-                          <Badge variant="outline" className="text-xs">Descartables</Badge>
+                        <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
+                          <h3 className="font-semibold text-sm mb-2 text-foreground">Descartables</h3>
+                          <Badge variant="outline" className="text-xs font-medium">Descartables</Badge>
                         </div>
                       )}
                     </CardContent>
