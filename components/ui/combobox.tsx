@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover"
 
 interface ComboboxProps {
-  options: Array<{ value: string; label: string }>
+  options: Array<{ value: string; label: string; searchText?: string }>
   value?: string
   onValueChange: (value: string) => void
   placeholder?: string
@@ -59,34 +59,40 @@ export function Combobox({
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.label}
-                  onSelect={(currentValue) => {
-                    // El valor que viene es el label, pero necesitamos el value
-                    const selectedOption = options.find(opt => opt.label === currentValue)
-                    if (selectedOption) {
-                      onValueChange(selectedOption.value === value ? "" : selectedOption.value)
+              {options.map((option) => {
+                // Usar searchText si está disponible, sino usar label
+                const searchValue = option.searchText || option.label
+                return (
+                  <CommandItem
+                    key={option.value}
+                    value={searchValue}
+                    onSelect={(currentValue) => {
+                      // El valor que viene es el searchValue, pero necesitamos el value
+                      const selectedOption = options.find(opt => 
+                        (opt.searchText || opt.label).toLowerCase() === currentValue.toLowerCase()
+                      )
+                      if (selectedOption) {
+                        onValueChange(selectedOption.value === value ? "" : selectedOption.value)
+                        setOpen(false)
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      onValueChange(option.value === value ? "" : option.value)
                       setOpen(false)
-                    }
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    onValueChange(option.value === value ? "" : option.value)
-                    setOpen(false)
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
-                </CommandItem>
-              ))}
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option.label}
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

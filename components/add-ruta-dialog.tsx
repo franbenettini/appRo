@@ -511,10 +511,41 @@ export function AddRutaDialog({ open, onOpenChange, rutaId, onSuccess }: AddRuta
             </div>
 
             {fields.map((field, index) => {
-              const clientOptions = availableClients.map((client) => ({
-                value: client.id,
-                label: client.razon_social || client.nombre_establecimiento || "Sin nombre",
-              }))
+              const clientOptions = availableClients.map((client: any) => {
+                const nombre = client.razon_social || client.nombre_establecimiento || "Sin nombre"
+                const detalles: string[] = []
+                if (client.cuit) detalles.push(`CUIT: ${client.cuit}`)
+                if (client.localidad) detalles.push(client.localidad)
+                if (client.provincia) detalles.push(client.provincia)
+                const contactos = client.client_contacts || []
+                if (contactos.length > 0) {
+                  const tiposContacto = contactos.map((c: any) => c.tipo_contacto).filter(Boolean)
+                  if (tiposContacto.length > 0) {
+                    detalles.push(`Contactos: ${tiposContacto.join(", ")}`)
+                  }
+                }
+                const label = detalles.length > 0 
+                  ? `${nombre} (${detalles.join(" - ")})`
+                  : nombre
+                return {
+                  value: client.id,
+                  label: label,
+                  searchText: [
+                    nombre,
+                    client.razon_social,
+                    client.nombre_establecimiento,
+                    client.cuit,
+                    client.localidad,
+                    client.provincia,
+                    ...(contactos.map((c: any) => [
+                      c.nombre,
+                      c.email,
+                      c.telefono,
+                      c.tipo_contacto
+                    ].filter(Boolean).join(" ")))
+                  ].filter(Boolean).join(" ").toLowerCase()
+                }
+              })
 
               return (
                 <div key={field.id} className="flex items-start gap-2 p-3 border rounded-md">
@@ -530,7 +561,7 @@ export function AddRutaDialog({ open, onOpenChange, rutaId, onSuccess }: AddRuta
                             setValue(`clientes.${index}.orden`, index)
                           }}
                           placeholder="Buscar y seleccionar cliente..."
-                          searchPlaceholder="Buscar cliente..."
+                          searchPlaceholder="Buscar por nombre, CUIT, localidad, contacto..."
                           emptyMessage="No se encontraron clientes."
                           disabled={loading}
                         />

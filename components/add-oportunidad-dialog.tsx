@@ -23,40 +23,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-const ESTADOS_CLIENTE = [
-  "Enviar cotización",
-  "Cotización enviada",
-  "Seguimiento en 30 días",
-  "Seguimiento en 15 días",
-  "Pendiente de respuesta",
-  "En negociación",
-  "Cerrado",
-  "Sin interés",
-  "Otro",
-]
+import { Combobox } from "@/components/ui/combobox"
 
 const oportunidadSchema = z.object({
   client_id: z.string().min(1, "Debe seleccionar un cliente"),
   titulo: z.string().min(1, "El título es requerido").max(200, "El título no puede exceder 200 caracteres"),
-  descripcion: z.string().max(1000, "La descripción no puede exceder 1000 caracteres").optional(),
-  valor_estimado: z.string().optional().refine((val) => {
-    if (!val || val.trim() === "") return true
-    const num = parseFloat(val)
-    return !isNaN(num) && num >= 0
-  }, {
-    message: "El valor debe ser un número válido"
-  }),
-  probabilidad: z.string().refine((val) => {
-    const num = parseInt(val)
-    return !isNaN(num) && num >= 0 && num <= 100
-  }, {
-    message: "La probabilidad debe ser un número entre 0 y 100"
-  }),
-  estado: z.enum(["nueva", "en_seguimiento", "ganada", "perdida", "cerrada"]).default("nueva"),
-  estado_cliente: z.string().optional(), // Estado del cliente en la ruta
-  fecha_cierre_estimada: z.string().optional(),
-  notas: z.string().max(1000, "Las notas no pueden exceder 1000 caracteres").optional(),
+  descripcion: z.string().min(1, "La descripción es requerida").max(1000, "La descripción no puede exceder 1000 caracteres"),
+  estado: z.enum([
+    "nueva", 
+    "en_seguimiento", 
+    "enviar_cotizacion",
+    "cotizacion_enviada",
+    "ganada", 
+    "perdida", 
+    "cerrada"
+  ]).default("nueva"),
+  producto_id: z.string().optional().nullable(), // Producto del catálogo
+  tipo_producto: z.enum(["descartables"]).optional().nullable(), // Para distinguir "Descartables" de "Ninguno"
 })
 
 type OportunidadFormValues = z.infer<typeof oportunidadSchema>
@@ -65,6 +48,15 @@ interface Client {
   id: string
   razon_social: string | null
   nombre_establecimiento: string | null
+  cuit?: string | null
+  localidad?: string | null
+  provincia?: string | null
+  client_contacts?: Array<{
+    nombre: string | null
+    tipo_contacto: string
+    email: string | null
+    telefono: string | null
+  }>
 }
 
 interface AddOportunidadDialogProps {
@@ -72,9 +64,18 @@ interface AddOportunidadDialogProps {
   onOpenChange: (open: boolean) => void
   oportunidadId?: string | null
   clientId?: string | null // Si se pasa, preselecciona este cliente
-  rutaClienteId?: string | null // ID del registro en ruta_clientes para actualizar estado_cliente
-  estadoClienteInicial?: string | null // Estado inicial del cliente en la ruta
+  productoId?: string | null // Si se pasa, preselecciona este producto
+  rutaClienteId?: string | null // ID del registro en ruta_clientes (mantenido por compatibilidad pero no se usa)
   onSuccess?: () => void
+}
+
+interface Producto {
+  id: string
+  nombre_equipo: string
+  marca: string
+  modelo: string
+  rubro: string
+  imagen_url?: string | null
 }
 
 export function AddOportunidadDialog({ 
@@ -82,13 +83,16 @@ export function AddOportunidadDialog({
   onOpenChange, 
   oportunidadId, 
   clientId,
+  productoId,
   rutaClienteId,
-  estadoClienteInicial,
   onSuccess 
 }: AddOportunidadDialogProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [availableClients, setAvailableClients] = useState<Client[]>([])
+  const [availableProductos, setAvailableProductos] = useState<Producto[]>([])
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const supabase = createClient()
   const isEditing = !!oportunidadId
 
@@ -105,24 +109,23 @@ export function AddOportunidadDialog({
       client_id: "",
       titulo: "",
       descripcion: "",
-      valor_estimado: "",
-      probabilidad: "50",
       estado: "nueva",
-      estado_cliente: "",
-      fecha_cierre_estimada: "",
-      notas: "",
+      producto_id: null,
+      tipo_producto: null,
     },
   })
 
   const estado = watch("estado")
-  const estadoCliente = watch("estado_cliente")
   const selectedClientId = watch("client_id")
+  const selectedProductoId = watch("producto_id")
+  const tipoProducto = watch("tipo_producto")
 
   useEffect(() => {
     if (open) {
       setError(null)
       setLoading(false)
       loadAvailableClients()
+      loadAvailableProductos()
       if (isEditing && oportunidadId) {
         loadOportunidadData()
       } else {
@@ -130,17 +133,33 @@ export function AddOportunidadDialog({
           client_id: clientId || "",
           titulo: "",
           descripcion: "",
-          valor_estimado: "",
-          probabilidad: "50",
           estado: "nueva",
-          estado_cliente: estadoClienteInicial || "",
-          fecha_cierre_estimada: "",
-          notas: "",
+          producto_id: productoId || null,
+          tipo_producto: null,
         })
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, oportunidadId, clientId])
+  }, [open, oportunidadId, clientId, productoId])
+
+  const loadAvailableProductos = async () => {
+    try {
+      const { data: productosData, error } = await supabase
+        .from("productos")
+        .select("id, nombre_equipo, marca, modelo, rubro, imagen_url")
+        .eq("activo", true)
+        .order("nombre_equipo", { ascending: true })
+
+      if (error) {
+        console.error("Error loading productos:", error)
+        return
+      }
+
+      setAvailableProductos(productosData || [])
+    } catch (error) {
+      console.error("Error:", error)
+    }
+  }
 
   const loadAvailableClients = async () => {
     try {
@@ -170,11 +189,22 @@ export function AddOportunidadDialog({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || !oportunidadId) return
 
+      setCurrentUserId(user.id)
+
+      // Verificar si el usuario es admin
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+      const userIsAdmin = !userError && userData?.role === "admin"
+      setIsAdmin(userIsAdmin)
+
       const { data: oportunidadData, error: oportunidadError } = await supabase
         .from("oportunidades")
-        .select("*")
+        .select("*, producto:productos(id, nombre_equipo, marca, modelo, rubro)")
         .eq("id", oportunidadId)
-        .eq("created_by", user.id)
         .single()
 
       if (oportunidadError || !oportunidadData) {
@@ -182,18 +212,19 @@ export function AddOportunidadDialog({
         return
       }
 
+      // Verificar permisos: solo admin o creador pueden editar
+      if (!userIsAdmin && oportunidadData.created_by !== user.id) {
+        setError("No tienes permisos para editar esta oportunidad")
+        return
+      }
+
       reset({
         client_id: oportunidadData.client_id || "",
         titulo: oportunidadData.titulo || "",
         descripcion: oportunidadData.descripcion || "",
-        valor_estimado: oportunidadData.valor_estimado?.toString() || "",
-        probabilidad: oportunidadData.probabilidad?.toString() || "50",
         estado: oportunidadData.estado || "nueva",
-        estado_cliente: estadoClienteInicial || "",
-        fecha_cierre_estimada: oportunidadData.fecha_cierre_estimada
-          ? new Date(oportunidadData.fecha_cierre_estimada).toISOString().split('T')[0]
-          : "",
-        notas: oportunidadData.notas || "",
+        producto_id: oportunidadData.producto_id || null,
+        tipo_producto: oportunidadData.tipo_producto || null,
       })
     } catch (error) {
       console.error("Error:", error)
@@ -214,24 +245,64 @@ export function AddOportunidadDialog({
         return
       }
 
+      // Manejar producto_id y tipo_producto
+      let productoIdToSave: string | null = null
+      let tipoProductoToSave: string | null = null
+      
+      if (data.producto_id && data.producto_id !== "none" && data.producto_id !== "descartables") {
+        // Es un producto del catálogo
+        productoIdToSave = data.producto_id
+        tipoProductoToSave = null
+      } else if (data.tipo_producto === "descartables" || data.producto_id === "descartables") {
+        // Es "Descartables"
+        productoIdToSave = null
+        tipoProductoToSave = "descartables"
+      } else {
+        // Es "Ninguno"
+        productoIdToSave = null
+        tipoProductoToSave = null
+      }
+
       const oportunidadData: any = {
         client_id: data.client_id,
         titulo: data.titulo,
-        descripcion: data.descripcion || null,
-        valor_estimado: data.valor_estimado ? parseFloat(data.valor_estimado) : null,
-        probabilidad: parseInt(data.probabilidad),
+        descripcion: data.descripcion,
         estado: data.estado,
-        fecha_cierre_estimada: data.fecha_cierre_estimada || null,
-        notas: data.notas || null,
+        producto_id: productoIdToSave,
+        tipo_producto: tipoProductoToSave,
       }
 
       if (isEditing && oportunidadId) {
+        // Verificar permisos antes de actualizar
+        const { data: existingOportunidad, error: checkError } = await supabase
+          .from("oportunidades")
+          .select("created_by")
+          .eq("id", oportunidadId)
+          .single()
+
+        if (checkError || !existingOportunidad) {
+          setError("Error al verificar permisos")
+          return
+        }
+
+        // Verificar si es admin o creador
+        if (!isAdmin && existingOportunidad.created_by !== user.id) {
+          setError("No tienes permisos para editar esta oportunidad")
+          return
+        }
+
         // Actualizar oportunidad existente
-        const { error: updateError } = await supabase
+        let updateQuery = supabase
           .from("oportunidades")
           .update(oportunidadData)
           .eq("id", oportunidadId)
-          .eq("created_by", user.id)
+
+        // Si no es admin, solo puede actualizar sus propias oportunidades
+        if (!isAdmin) {
+          updateQuery = updateQuery.eq("created_by", user.id)
+        }
+
+        const { error: updateError } = await updateQuery
 
         if (updateError) {
           setError(updateError.message)
@@ -241,26 +312,28 @@ export function AddOportunidadDialog({
         // Crear nueva oportunidad
         oportunidadData.created_by = user.id
 
-        const { error: insertError } = await supabase
+        const { data: newOportunidad, error: insertError } = await supabase
           .from("oportunidades")
           .insert(oportunidadData)
+          .select()
+          .single()
 
         if (insertError) {
           setError(insertError.message)
           return
         }
-      }
 
-      // Actualizar estado_cliente en ruta_clientes si se proporcionó rutaClienteId
-      if (rutaClienteId && data.estado_cliente) {
-        const { error: updateRutaClienteError } = await supabase
-          .from("ruta_clientes")
-          .update({ estado_cliente: data.estado_cliente })
-          .eq("id", rutaClienteId)
-
-        if (updateRutaClienteError) {
-          console.error("Error updating estado_cliente:", updateRutaClienteError)
-          // No fallar la operación si solo falla la actualización del estado
+        // Registrar el estado inicial en el historial
+        if (newOportunidad) {
+          await supabase
+            .from("oportunidad_historial")
+            .insert({
+              oportunidad_id: newOportunidad.id,
+              estado_anterior: null,
+              estado_nuevo: oportunidadData.estado,
+              comentario: "Oportunidad creada",
+              changed_by: user.id,
+            })
         }
       }
 
@@ -293,25 +366,89 @@ export function AddOportunidadDialog({
             <Label htmlFor="client_id">
               Cliente <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={selectedClientId}
+            <Combobox
+              options={availableClients.map((client) => {
+                const nombre = client.razon_social || client.nombre_establecimiento || "Sin nombre"
+                const detalles: string[] = []
+                if (client.cuit) detalles.push(`CUIT: ${client.cuit}`)
+                if (client.localidad) detalles.push(client.localidad)
+                if (client.provincia) detalles.push(client.provincia)
+                const contactos = (client as any).client_contacts || []
+                if (contactos.length > 0) {
+                  const tiposContacto = contactos.map((c: any) => c.tipo_contacto).filter(Boolean)
+                  if (tiposContacto.length > 0) {
+                    detalles.push(`Contactos: ${tiposContacto.join(", ")}`)
+                  }
+                }
+                const label = detalles.length > 0 
+                  ? `${nombre} (${detalles.join(" - ")})`
+                  : nombre
+                return {
+                  value: client.id,
+                  label: label,
+                  searchText: [
+                    nombre,
+                    client.razon_social,
+                    client.nombre_establecimiento,
+                    client.cuit,
+                    client.localidad,
+                    client.provincia,
+                    ...(contactos.map((c: any) => [
+                      c.nombre,
+                      c.email,
+                      c.telefono,
+                      c.tipo_contacto
+                    ].filter(Boolean).join(" ")))
+                  ].filter(Boolean).join(" ").toLowerCase()
+                }
+              })}
+              value={selectedClientId || ""}
               onValueChange={(value) => setValue("client_id", value)}
+              placeholder="Buscar y seleccionar cliente..."
+              searchPlaceholder="Buscar por nombre, CUIT, localidad, contacto..."
+              emptyMessage="No se encontraron clientes."
               disabled={loading || !!clientId}
+            />
+            {errors.client_id && (
+              <p className="text-sm text-destructive">{errors.client_id.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="producto_id">Producto</Label>
+            <Select
+              value={
+                tipoProducto === "descartables" 
+                  ? "descartables" 
+                  : selectedProductoId || "none"
+              }
+              onValueChange={(value) => {
+                if (value === "none") {
+                  setValue("producto_id", null)
+                  setValue("tipo_producto", null)
+                } else if (value === "descartables") {
+                  setValue("producto_id", null)
+                  setValue("tipo_producto", "descartables")
+                } else {
+                  setValue("producto_id", value)
+                  setValue("tipo_producto", null)
+                }
+              }}
+              disabled={loading}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar cliente" />
+              <SelectTrigger id="producto_id">
+                <SelectValue placeholder="Seleccionar producto (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                {availableClients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.razon_social || client.nombre_establecimiento || "Sin nombre"}
+                <SelectItem value="none">Ninguno</SelectItem>
+                <SelectItem value="descartables">Descartables</SelectItem>
+                {availableProductos.map((producto) => (
+                  <SelectItem key={producto.id} value={producto.id}>
+                    {producto.nombre_equipo} - {producto.marca} {producto.modelo} ({producto.rubro})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {errors.client_id && (
-              <p className="text-sm text-destructive">{errors.client_id.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -330,121 +467,49 @@ export function AddOportunidadDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="descripcion">Descripción</Label>
+            <Label htmlFor="descripcion">
+              Descripción <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="descripcion"
               {...register("descripcion")}
               placeholder="Descripción detallada de la oportunidad..."
               disabled={loading}
-              rows={3}
+              rows={4}
             />
             {errors.descripcion && (
               <p className="text-sm text-destructive">{errors.descripcion.message}</p>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="valor_estimado">Valor Estimado</Label>
-              <Input
-                id="valor_estimado"
-                type="number"
-                step="0.01"
-                {...register("valor_estimado")}
-                placeholder="0.00"
-                disabled={loading}
-              />
-              {errors.valor_estimado && (
-                <p className="text-sm text-destructive">{errors.valor_estimado.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="probabilidad">Probabilidad (%)</Label>
-              <Input
-                id="probabilidad"
-                type="number"
-                min="0"
-                max="100"
-                {...register("probabilidad")}
-                placeholder="50"
-                disabled={loading}
-              />
-              {errors.probabilidad && (
-                <p className="text-sm text-destructive">{errors.probabilidad.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="estado">Estado de la Oportunidad</Label>
-              <Select
-                value={estado}
-                onValueChange={(value) => setValue("estado", value as any)}
-                disabled={loading}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nueva">Nueva</SelectItem>
-                  <SelectItem value="en_seguimiento">En Seguimiento</SelectItem>
-                  <SelectItem value="ganada">Ganada</SelectItem>
-                  <SelectItem value="perdida">Perdida</SelectItem>
-                  <SelectItem value="cerrada">Cerrada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fecha_cierre_estimada">Fecha de Cierre Estimada</Label>
-              <Input
-                id="fecha_cierre_estimada"
-                type="date"
-                {...register("fecha_cierre_estimada")}
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          {rutaClienteId && (
-            <div className="space-y-2">
-              <Label htmlFor="estado_cliente">
-                Estado del Cliente
-              </Label>
-              <Select
-                value={estadoCliente || ""}
-                onValueChange={(value) => setValue("estado_cliente", value)}
-                disabled={loading}
-              >
-                <SelectTrigger id="estado_cliente">
-                  <SelectValue placeholder="Seleccionar estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ESTADOS_CLIENTE.map((estado) => (
-                    <SelectItem key={estado} value={estado}>
-                      {estado}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="space-y-2">
-            <Label htmlFor="notas">Notas</Label>
-            <Textarea
-              id="notas"
-              {...register("notas")}
-              placeholder="Notas adicionales..."
+            <Label htmlFor="estado">
+              Estado de la Oportunidad <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={estado}
+              onValueChange={(value) => setValue("estado", value as any)}
               disabled={loading}
-              rows={2}
-            />
-            {errors.notas && (
-              <p className="text-sm text-destructive">{errors.notas.message}</p>
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nueva">Nueva</SelectItem>
+                <SelectItem value="en_seguimiento">En Seguimiento</SelectItem>
+                <SelectItem value="enviar_cotizacion">Enviar Cotización</SelectItem>
+                <SelectItem value="cotizacion_enviada">Cotización Enviada</SelectItem>
+                <SelectItem value="ganada">Ganada</SelectItem>
+                <SelectItem value="perdida">Perdida</SelectItem>
+                <SelectItem value="cerrada">Cerrada</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.estado && (
+              <p className="text-sm text-destructive">{errors.estado.message}</p>
             )}
           </div>
+
+
 
           {error && (
             <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">

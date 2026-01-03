@@ -80,97 +80,132 @@ export function ClientsList({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Construir query base
-      let query = supabase
+      // Obtener TODOS los clientes del usuario con sus contactos (sin paginación para búsqueda completa)
+      let baseQuery = supabase
         .from("clients")
-        .select("id, razon_social, nombre_establecimiento, tipo_establecimiento, cuit, direccion, localidad, provincia, direccion_lat, direccion_lng, status, created_by, created_at", { count: "exact" })
+        .select(`
+          id, 
+          razon_social, 
+          nombre_establecimiento, 
+          tipo_establecimiento, 
+          cuit, 
+          direccion, 
+          localidad, 
+          provincia, 
+          direccion_lat, 
+          direccion_lng, 
+          status, 
+          created_by, 
+          created_at,
+          client_contacts (nombre, tipo_contacto, email, telefono)
+        `)
         .eq("created_by", user.id)
 
-      // Aplicar filtros
+      // Aplicar filtros de tipo y provincia
       if (tipoEstablecimientoFilter !== "all") {
-        query = query.eq("tipo_establecimiento", tipoEstablecimientoFilter)
+        baseQuery = baseQuery.eq("tipo_establecimiento", tipoEstablecimientoFilter)
       }
 
       if (provinciaFilter !== "all") {
-        query = query.ilike("provincia", `%${provinciaFilter}%`)
+        baseQuery = baseQuery.ilike("provincia", `%${provinciaFilter}%`)
       }
 
-      // Aplicar búsqueda (buscar en razón social, nombre, CUIT y dirección)
-      if (searchQuery.trim() !== "") {
-        const searchTerm = `%${searchQuery.trim()}%`
-        query = query.or(
-          `razon_social.ilike.${searchTerm},nombre_establecimiento.ilike.${searchTerm},cuit.ilike.${searchTerm},direccion.ilike.${searchTerm},localidad.ilike.${searchTerm}`
-        )
-      }
-
-      // Obtener el total de clientes para calcular páginas
-      const { count, error: countError } = await query
-
-      if (countError) {
-        console.error("Error counting clients:", countError)
-        return
-      }
-
-      const total = count || 0
-      setTotalCount(total)
-      setTotalPages(Math.ceil(total / ITEMS_PER_PAGE))
-
-      // Obtener clientes del usuario con paginación
-      const from = (currentPage - 1) * ITEMS_PER_PAGE
-      const to = from + ITEMS_PER_PAGE - 1
-
-      // Reconstruir query para obtener los datos
-      let dataQuery = supabase
-        .from("clients")
-        .select("id, razon_social, nombre_establecimiento, tipo_establecimiento, cuit, direccion, localidad, provincia, direccion_lat, direccion_lng, status, created_by, created_at")
-        .eq("created_by", user.id)
-
-      // Aplicar los mismos filtros
-      if (tipoEstablecimientoFilter !== "all") {
-        dataQuery = dataQuery.eq("tipo_establecimiento", tipoEstablecimientoFilter)
-      }
-
-      if (provinciaFilter !== "all") {
-        dataQuery = dataQuery.ilike("provincia", `%${provinciaFilter}%`)
-      }
-
-      if (searchQuery.trim() !== "") {
-        const searchTerm = `%${searchQuery.trim()}%`
-        dataQuery = dataQuery.or(
-          `razon_social.ilike.${searchTerm},nombre_establecimiento.ilike.${searchTerm},cuit.ilike.${searchTerm},direccion.ilike.${searchTerm},localidad.ilike.${searchTerm}`
-        )
-      }
-
-      const { data: clientsData, error: clientsError } = await dataQuery
-        .order("created_at", { ascending: false })
-        .range(from, to)
+      const { data: allClientsData, error: clientsError } = await baseQuery.order("created_at", { ascending: false })
 
       if (clientsError) {
         console.error("Error fetching clients:", clientsError)
+        setClients([])
+        setTotalCount(0)
+        setTotalPages(0)
         return
       }
 
-      setClients(clientsData || [])
-
-      // Obtener contactos de los clientes
-      if (clientsData && clientsData.length > 0) {
-        const clientIds = clientsData.map(c => c.id)
-        const { data: contactsData, error: contactsError } = await supabase
-          .from("client_contacts")
-          .select("*")
-          .in("client_id", clientIds)
-
-        if (!contactsError && contactsData) {
-          const contactsMap: Record<string, ClientContact[]> = {}
-          contactsData.forEach(contact => {
-            if (!contactsMap[contact.client_id]) {
-              contactsMap[contact.client_id] = []
-            }
-            contactsMap[contact.client_id].push(contact)
-          })
-          setClientContacts(contactsMap)
-        }
+      // Filtrar en memoria por búsqueda (más confiable que .or() en Supabase)
+      let filteredClients = allClientsData || []
+      
+      // Debug: verificar cuántos clientes se cargaron
+      console.log("Total clientes cargados de DB:", filteredClients.length, "| Búsqueda:", searchQuery || "(vacía)")
+      
+      if (searchQuery.trim() !== "") {
+        const searchLower = searchQuery.trim().toLowerCase()
+        const normalizedSearch = searchLower.replace(/-/g, "")
+        
+        filteredClients = (allClientsData || []).filter((client: any) => {
+          // Buscar en campos del cliente
+          const razonSocial = (client.razon_social || "").toLowerCase()
+          const nombreEstablecimiento = (client.nombre_establecimiento || "").toLowerCase()
+          const cuit = (client.cuit || "").toLowerCase()
+          const direccion = (client.direccion || "").toLowerCase()
+          const localidad = (client.localidad || "").toLowerCase()
+          const provincia = (client.provincia || "").toLowerCase()
+          
+          // Verificar coincidencias en campos del cliente
+          const matchesClientFields = 
+            razonSocial.includes(searchLower) ||
+            nombreEstablecimiento.includes(searchLower) ||
+            cuit.includes(searchLower) ||
+            cuit.replace(/-/g, "").includes(normalizedSearch) ||
+            direccion.includes(searchLower) ||
+            localidad.includes(searchLower) ||
+            provincia.includes(searchLower)
+          
+          // Buscar en contactos
+          let matchesContacts = false
+          if (client.client_contacts && client.client_contacts.length > 0) {
+            matchesContacts = client.client_contacts.some((contact: any) => {
+              const nombre = (contact.nombre || "").toLowerCase()
+              const email = (contact.email || "").toLowerCase()
+              const telefono = (contact.telefono || "").toLowerCase()
+              const tipoContacto = (contact.tipo_contacto || "").toLowerCase()
+              
+              return nombre.includes(searchLower) ||
+                     email.includes(searchLower) ||
+                     telefono.includes(searchLower) ||
+                     tipoContacto.includes(searchLower)
+            })
+          }
+          
+          return matchesClientFields || matchesContacts
+        })
       }
+
+      // Ordenar por fecha de creación (más recientes primero) - solo si no viene ordenado de la DB
+      if (filteredClients.length > 0 && !allClientsData?.length) {
+        filteredClients.sort((a: any, b: any) => {
+          const dateA = new Date(a.created_at).getTime()
+          const dateB = new Date(b.created_at).getTime()
+          return dateB - dateA
+        })
+      }
+
+      // Calcular total y páginas
+      const total = filteredClients.length
+      setTotalCount(total)
+      setTotalPages(Math.ceil(total / ITEMS_PER_PAGE) || 1)
+
+      // Aplicar paginación
+      const from = (currentPage - 1) * ITEMS_PER_PAGE
+      const to = from + ITEMS_PER_PAGE
+      const paginatedClients = filteredClients.slice(from, to)
+      
+      // Debug: verificar paginación
+      console.log("Total filtrados:", total, "| Página:", currentPage, "| Mostrando:", paginatedClients.length, "clientes (índices", from, "a", to - 1, ")")
+
+      // Procesar contactos
+      const clientsWithContacts = paginatedClients.map((client: any) => {
+        const contacts = client.client_contacts || []
+        return {
+          ...client,
+          contacts: contacts.map((c: any) => ({
+            tipo: c.tipo_contacto,
+            nombre: c.nombre || null,
+            email: c.email || null,
+            telefono: c.telefono || null,
+          })),
+        }
+      })
+      
+      setClients(clientsWithContacts)
     } catch (error) {
       console.error("Error:", error)
     } finally {
@@ -226,8 +261,8 @@ export function ClientsList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {clients.map((client) => {
-              const contacts = clientContacts[client.id] || []
+            {clients.map((client: any) => {
+              const contacts = client.contacts || []
               const displayName = client.razon_social || "Sin razón social"
               
               return (
@@ -246,12 +281,12 @@ export function ClientsList({
                   <TableCell>
                     {contacts.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
-                        {contacts.map((contact) => (
+                        {contacts.map((contact: any, idx: number) => (
                           <span
-                            key={contact.id}
+                            key={idx}
                             className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary"
                           >
-                            {contact.tipo_contacto}
+                            {contact.tipo || contact.tipo_contacto || "Contacto"}
                           </span>
                         ))}
                       </div>

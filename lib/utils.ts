@@ -40,3 +40,25 @@ export function formatDate(date: string | Date | null | undefined): string {
   }
 }
 
+/**
+ * Convierte una fecha en formato DD/MM/YYYY a YYYY-MM-DD
+ * @param dateString - Fecha en formato DD/MM/YYYY
+ * @returns String en formato YYYY-MM-DD o null si es inválida
+ */
+export function parseDateInput(dateString: string): string | null {
+  if (!dateString) return null
+  const parts = dateString.split("/")
+  if (parts.length === 3 && parts[0] && parts[1] && parts[2] && parts[2].length === 4) {
+    const day = parts[0].padStart(2, "0")
+    const month = parts[1].padStart(2, "0")
+    const year = parts[2]
+    // Validar que sea una fecha real
+    const date = new Date(`${year}-${month}-${day}T00:00:00Z`)
+    if (isNaN(date.getTime()) || date.getUTCDate() !== parseInt(day) || date.getUTCMonth() + 1 !== parseInt(month) || date.getUTCFullYear() !== parseInt(year)) {
+      return null
+    }
+    return `${year}-${month}-${day}`
+  }
+  return null
+}
+

@@ -12,7 +12,9 @@ import {
   Menu,
   Users,
   MapPin,
-  TrendingUp
+  TrendingUp,
+  FileText,
+  Package
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SidebarToggle } from "@/components/sidebar-toggle"
@@ -22,6 +24,7 @@ const navigation = [
   { name: "Clientes", href: "/dashboard/clients", icon: Building2 },
   { name: "Visitas", href: "/dashboard/visitas", icon: MapPin },
   { name: "Oportunidades", href: "/dashboard/oportunidades", icon: TrendingUp },
+  { name: "Catálogo", href: "/dashboard/catalogo", icon: Package },
 ]
 
 interface SidebarProps {
@@ -103,9 +106,9 @@ export function Sidebar({ className, onClose, isCollapsed = false, onToggle }: S
         })}
       </nav>
       
-      {/* Opción de administración al final, solo para admins */}
+      {/* Opciones de administración al final, solo para admins */}
       {!loading && isAdmin && (
-        <div className="border-t border-border px-3 py-2">
+        <div className="border-t border-border px-3 py-2 space-y-1">
           <Link
             href="/dashboard/admin"
             onClick={onClose}
@@ -120,6 +123,36 @@ export function Sidebar({ className, onClose, isCollapsed = false, onToggle }: S
           >
             <Users className="h-5 w-5 flex-shrink-0" />
             {!isCollapsed && <span>Gestionar usuarios</span>}
+          </Link>
+          <Link
+            href="/dashboard/productos"
+            onClick={onClose}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+              pathname === "/dashboard/productos"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              isCollapsed && "justify-center"
+            )}
+            title={isCollapsed ? "Productos" : undefined}
+          >
+            <Package className="h-5 w-5 flex-shrink-0" />
+            {!isCollapsed && <span>Productos</span>}
+          </Link>
+          <Link
+            href="/dashboard/reportes"
+            onClick={onClose}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+              pathname === "/dashboard/reportes"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              isCollapsed && "justify-center"
+            )}
+            title={isCollapsed ? "Reportes" : undefined}
+          >
+            <FileText className="h-5 w-5 flex-shrink-0" />
+            {!isCollapsed && <span>Reportes</span>}
           </Link>
         </div>
       )}

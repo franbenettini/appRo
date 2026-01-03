@@ -460,12 +460,36 @@ export function RutaDetalleDialog({ open, onOpenChange, rutaId, onSuccess }: Rut
             }}
             clientId={selectedClientId}
             rutaClienteId={selectedRutaClienteId}
-            estadoClienteInicial={selectedRutaClienteId ? (updates[selectedRutaClienteId]?.estado_cliente ?? rutaClientes.find(rc => rc.id === selectedRutaClienteId)?.estado_cliente ?? null) : null}
             onSuccess={() => {
+              // Marcar automáticamente el cliente como visitado cuando se crea una oportunidad
+              if (selectedRutaClienteId) {
+                const rutaCliente = rutaClientes.find(rc => rc.id === selectedRutaClienteId)
+                if (rutaCliente && !rutaCliente.visitado) {
+                  // Actualizar el estado local sin recargar desde la base de datos
+                  handleVisitadoChange(selectedRutaClienteId, true)
+                  
+                  // También actualizar en la base de datos
+                  supabase
+                    .from("ruta_clientes")
+                    .update({
+                      visitado: true,
+                      fecha_visita: new Date().toISOString(),
+                    })
+                    .eq("id", selectedRutaClienteId)
+                    .then(() => {
+                      // Actualizar el estado local de rutaClientes
+                      setRutaClientes(prev => prev.map(rc => 
+                        rc.id === selectedRutaClienteId 
+                          ? { ...rc, visitado: true, fecha_visita: new Date().toISOString() }
+                          : rc
+                      ))
+                    })
+                }
+              }
+              
               setOportunidadDialogOpen(false)
               setSelectedClientId(null)
               setSelectedRutaClienteId(null)
-              loadRutaDetalle() // Recargar para actualizar el estado
             }}
           />
 

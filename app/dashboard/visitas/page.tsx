@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { AddRutaDialog } from "@/components/add-ruta-dialog"
 import { RutaDetalleDialog } from "@/components/ruta-detalle-dialog"
+import { Calendar, CheckCircle2, Clock, Users } from "lucide-react"
 
 interface Ruta {
   id: string
@@ -210,6 +212,16 @@ export default function VisitasPage() {
     }
   }
 
+  // Calcular KPIs
+  const totalRutas = rutas.length
+  const rutasPlanificadas = rutas.filter(r => r.estado === "planificada").length
+  const rutasCompletadas = rutas.filter(r => r.estado === "finalizada").length
+  
+  // Calcular total de visitas
+  const totalVisitas = rutas.reduce((sum, ruta) => sum + (ruta.clientes_visitados || 0), 0)
+  const totalClientes = rutas.reduce((sum, ruta) => sum + (ruta.cantidad_clientes || 0), 0)
+  const porcentajeVisitas = totalClientes > 0 ? Math.round((totalVisitas / totalClientes) * 100) : 0
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -231,6 +243,66 @@ export default function VisitasPage() {
           <Plus className="mr-2 h-4 w-4" />
           Nueva Ruta
         </Button>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-primary/20 hover:border-primary/40 transition-colors">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Rutas</p>
+                <p className="text-2xl font-bold mt-1 text-primary">{totalRutas}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-blue-200/50 hover:border-blue-300/50 transition-colors">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Planificadas</p>
+                <p className="text-2xl font-bold mt-1 text-blue-600">{rutasPlanificadas}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <Clock className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-green-200/50 hover:border-green-300/50 transition-colors">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Completadas</p>
+                <p className="text-2xl font-bold mt-1 text-green-600">{rutasCompletadas}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-purple-200/50 hover:border-purple-300/50 transition-colors">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Tasa Visitas</p>
+                <p className="text-2xl font-bold mt-1 text-purple-600">{porcentajeVisitas}%</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{totalVisitas}/{totalClientes} clientes</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+                <Users className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {rutas.length === 0 ? (
